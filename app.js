@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
+import path from "path";
+
 import userRoutes from "./src/routes/user.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import propertyRoutes from "./src/routes/property.routes.js";
@@ -20,6 +22,11 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve the uploads folder as a static directory
+// This allows you to view images at http://localhost:5000/uploads/filename.jpg
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
