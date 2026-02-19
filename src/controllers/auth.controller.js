@@ -10,15 +10,12 @@ const sanitizeUser = (user) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, password, role, profilePhoto } = req.body;
-
+    // req.body contains text; req.file contains the photo
+    const { firstName, lastName, email, phone, password, role } = req.body;
 
     const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (userExists) return res.status(400).json({ message: "User already exists" });
 
-   
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
@@ -29,16 +26,17 @@ export const registerUser = async (req, res) => {
       phone,
       passwordHash,
       role,
-      profilePhoto: profilePhoto || "" 
+      // Store the file path in MongoDB
+      profilePhoto: req.file ? req.file.path : "" 
     });
 
     res.status(201).json(sanitizeUser(user));
-
   } catch (error) {
     console.error("Signup Error:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 export const loginUser = async (req, res) => {
   try {
