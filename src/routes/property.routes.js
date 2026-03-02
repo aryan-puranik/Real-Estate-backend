@@ -44,22 +44,11 @@ router.post("/", authAdmin, async (req, res) => {
   const property = await Property.create({
     ...req.body,
     assignedAdminId: req.admin.id,
-    status: "Pending"
   });
 
   res.status(201).json(property);
 });
 
-/* ---------- ADMIN: APPROVE PROPERTY ---------- */
-router.patch("/:id/approve", authAdmin, async (req, res) => {
-  const property = await Property.findByIdAndUpdate(
-    req.params.id,
-    { status: "Active" },
-    { new: true }
-  );
-
-  res.json(property);
-});
 
 /* ---------- ADMIN: MARK SOLD ---------- */
 router.patch("/:id/sold", authAdmin, async (req, res) => {
