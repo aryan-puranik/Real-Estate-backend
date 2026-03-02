@@ -1,58 +1,98 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
 const propertySchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    description: String,
-
-    landType: {
+    // === Step 1: Basic Land Details ===
+    propertyType: {
       type: String,
-      enum: ["Agriculture", "Residential", "Industrial", "Commercial"],
-      required: true
+      required: [true, 'Property type is required'],
+      enum: ['Agricultural', 'Farm', 'Plot'],
     },
-
-    price: { type: Number, required: true },
-    areaSqFt: Number,
-
-    address: {
-      city: String,
-      state: String,
-      locality: String,
-      pincode: String
-    },
-
-    images: [String],
-    amenities: [String],
-
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: 'User',
+      required: true
     },
-
-    assignedAdminId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin"
-    },
-
-    status: {
+    district: {
       type: String,
-      enum: ["Pending", "Approved", "Active", "Sold", "Rejected"],
-      default: "Pending"
+      required: [true, 'District is required'],
+    },
+    area: {
+      type: Number,
+      required: [true, 'Area is required'],
+    },
+    unit: {
+      type: String,
+      required: [true, 'Unit is required'],
+      enum: ['Acre', 'Bigha', 'Sq.ft'],
+    },
+    pricePerUnit: {
+      type: Number,
+      required: [true, 'Price per unit is required'],
+    },
+    totalPrice: {
+      type: Number,
+      required: [true, 'Total price is required'],
+    },
+    description: {
+      type: String,
+      default: '',
     },
 
-    isFeatured: { type: Boolean, default: false }
+    // === Site Details ===
+    roadAccess: {
+      type: Boolean,
+      default: false,
+    },
+    roadWidth: {
+      type: Number,
+      default: null, // Depending on if you plan to capture this in the future
+    },
+    highway: {
+      type: Boolean,
+      default: false,
+    },
+    waterLevel: {
+      type: Number,
+      default: null, // e.g. "In Feet"
+    },
+    landType: {
+      type: String,
+      enum: ['Irrigated', 'Non-Irrigated', 'Commercial', 'Residential', ''],
+      default: '',
+    },
+    soilType: {
+      type: String,
+      enum: ['Black Soil', 'Red Soil', 'Clay', 'Sandy', ''],
+      default: '',
+    },
+    // === Step 2: Upload Images ===
+    images: {
+      type: [String],
+      required: [true, 'At least 1 image is required'], // This ensures array isn't empty
+      validate: {
+        validator: function (v) {
+          return v && v.length > 0;
+        },
+        message: 'At least 1 image is required'
+      }
+    },
+
+    // === Step 3: Map Location ===
+    lat: {
+      type: Number,
+      required: [true, 'Latitude is required'],
+    },
+    lng: {
+      type: Number,
+      required: [true, 'Longitude is required'],
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // Automatically manages createdAt and updatedAt
+  }
 );
 
-propertySchema.index({
-  "address.city": 1,
-  "address.locality": 1,
-  price: 1,
-  propertyType: 1,
-  listingType: 1,
-  status: 1
-});
+const Property = mongoose.model('Property', propertySchema);
 
-
-export default mongoose.model("Property", propertySchema);
+module.exports = Property;

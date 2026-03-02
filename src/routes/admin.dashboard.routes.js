@@ -2,7 +2,7 @@ import express from "express";
 import { authAdmin } from "../middleware/auth.js";
 
 import PropertyInquiry from "../models/PropertyInquiry.js";
-import PropertySubmission from "../models/PropertySubmission.js";
+import Property from "../models/Property.js";
 import Consultation from "../models/Consultation.js";
 
 const router = express.Router();
@@ -18,7 +18,7 @@ router.get("/summary", authAdmin, async (req, res) => {
     });
 
     /* ---------- PENDING SUBMISSIONS ---------- */
-    const pendingSubmissions = await PropertySubmission.countDocuments({
+    const pendingSubmissions = await Property.countDocuments({
       status: { $in: ["Submitted", "UnderReview"] }
     });
 
