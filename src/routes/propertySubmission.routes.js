@@ -20,6 +20,8 @@ router.post(
       // Log received data for debugging
       console.log("Received form data:", req.body);
       console.log("Received files:", req.files);
+      console.log("User from auth middleware:", req.user);
+      console.log("User ID being used:", req.user.id);
 
       // Get uploaded file paths
       const imagePaths = req.files ? req.files.map(file => file.path) : [];
@@ -45,7 +47,7 @@ router.post(
         images: imagePaths,
         lat: parseFloat(req.body.lat),
         lng: parseFloat(req.body.lng),
-        sellerId: req.user.id // Add sellerId from auth middleware
+        sellerId: req.user.userId // Add sellerId from auth middleware
       };
 
       // Validate required fields

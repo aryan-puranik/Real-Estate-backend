@@ -16,6 +16,7 @@ import submissionRoutes from "./src/routes/propertySubmission.routes.js";
 import inquiryRoutes from "./src/routes/inquiry.routes.js";
 import adminInquiryRoutes from "./src/routes/admin.dashboard.routes.js";
 import adminDashboardRoutes from "./src/routes/admin.dashboard.routes.js";
+import buyPropertyRoutes from "./src/routes/buyerProperty.routes.js";
 
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use("/api/admin/submissions", adminSubmissionRoutes);
 app.use("/api/inquiries", inquiryRoutes);
 app.use("/api/admin/inquiries", adminInquiryRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/buyerProperty", buyPropertyRoutes);
 
 
 

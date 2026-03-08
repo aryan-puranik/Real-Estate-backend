@@ -1,7 +1,7 @@
 import express from "express";
 import { registerUser, loginUser } from "../controllers/auth.controller.js";
 import { userAuth, authAdmin } from "../middleware/auth.js";
-import { upload } from "../middleware/multer.js";
+import { uploadProfilePhoto, handleMulterError } from "../middleware/multer.js";
 import User from "../models/User.js";
 const router = express.Router();
 
@@ -17,7 +17,8 @@ router.get("/register", (req, res) => {
 // Register user with profile photo upload
 router.post(
   "/register",
-  upload.single("profilePhoto"),
+  uploadProfilePhoto.single('profilePhoto'), // 'profilePhoto' should match the field name in your form
+  handleMulterError,
   registerUser
 );
 

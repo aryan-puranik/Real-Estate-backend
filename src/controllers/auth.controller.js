@@ -39,11 +39,34 @@ export const registerUser = async (req, res) => {
       });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Please provide a valid email address"
+      });
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long"
+      });
+    }
+
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       console.log("❌ User already exists:", email);
       return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Check if phone is already registered (if provided)
+    if (phone) {
+      const phoneExists = await User.findOne({ phone });
+      if (phoneExists) {
+        return res.status(400).json({ message: "Phone number already registered" });
+      }
     }
 
     // Hash password
@@ -54,7 +77,8 @@ export const registerUser = async (req, res) => {
     // Process profile photo
     let profilePhoto = "";
     if (req.file) {
-      profilePhoto = `/uploads/${req.file.filename}`;
+      // Store the relative path that can be used to serve the file
+      profilePhoto = `/uploads/profiles/${req.file.filename}`;
       console.log("📸 Profile photo saved:", profilePhoto);
     }
 
@@ -62,7 +86,7 @@ export const registerUser = async (req, res) => {
       firstName,
       lastName,
       email,
-      phone,
+      phone: phone || '',
       password: passwordHash,
       role: role || 'buyer',
       profilePhoto
@@ -89,9 +113,13 @@ export const registerUser = async (req, res) => {
 
     console.log("✅ JWT token generated");
 
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     res.status(201).json({
       message: "User registered successfully",
-      user: sanitizeUser(user),
+      user: userResponse,
       token
     });
 
@@ -109,9 +137,10 @@ export const registerUser = async (req, res) => {
 
     // Check for duplicate key error
     if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
-        message: "Duplicate field value entered",
-        field: Object.keys(error.keyPattern)[0]
+        message: `${field} already exists`,
+        field
       });
     }
 
