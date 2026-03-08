@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = process.cwd();
+
 
 // Ensure upload directories exist
 const ensureDirectoryExists = (dirPath) => {
@@ -12,41 +13,70 @@ const ensureDirectoryExists = (dirPath) => {
   }
 };
 
-// Base upload paths
-const BASE_UPLOAD_PATH = path.join(__dirname, '../uploads/');
+// Base upload paths - now relative to root
+const BASE_UPLOAD_PATH = path.join(rootDir, 'uploads/');
 ensureDirectoryExists(BASE_UPLOAD_PATH);
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    let uploadPath = path.join(BASE_UPLOAD_PATH, 'properties/');
+// Create subdirectories for different upload types
+const UPLOAD_PATHS = {
+  properties: path.join(BASE_UPLOAD_PATH, 'properties/'),
+  profiles: path.join(BASE_UPLOAD_PATH, 'profiles/')
+};
 
-    // Create property-specific folder if property ID is available
-    if (req.body.propertyId) {
-      uploadPath = path.join(uploadPath, req.body.propertyId, '/');
-    } else if (req.params.id) {
-      uploadPath = path.join(uploadPath, req.params.id, '/');
-    }
 
-    // Create folder if it doesn't exist
-    ensureDirectoryExists(uploadPath);
-    cb(null, uploadPath);
-  },
+// Ensure all upload directories exist
+Object.values(UPLOAD_PATHS).forEach(dir => ensureDirectoryExists(dir));
 
-  filename: (req, file, cb) => {
-    // Sanitize filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    const sanitizedFilename = file.originalname
-      .replace(/[^a-zA-Z0-9]/g, '-')
-      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with single hyphen
-      .toLowerCase();
+// Dynamic storage based on upload type
+const getStorage = (uploadType = 'properties') => {
+  return multer.diskStorage({
+    destination: (req, file, cb) => {
+      let uploadPath;
 
-    // Remove extension from sanitized name if it exists
-    const nameWithoutExt = sanitizedFilename.replace(ext, '');
+      if (uploadType === 'profile') {
+        uploadPath = UPLOAD_PATHS.profiles;
+      } else {
+        // Property images logic
+        uploadPath = UPLOAD_PATHS.properties;
 
-    cb(null, `${uniqueSuffix}-${nameWithoutExt}${ext}`);
-  },
-});
+        // Create property-specific folder if property ID is available
+        if (req.body.propertyId) {
+          uploadPath = path.join(uploadPath, req.body.propertyId, '/');
+        } else if (req.params.id) {
+          uploadPath = path.join(uploadPath, req.params.id, '/');
+        }
+      }
+
+      // Create folder if it doesn't exist
+      ensureDirectoryExists(uploadPath);
+      cb(null, uploadPath);
+    },
+
+    filename: (req, file, cb) => {
+      // Sanitize filename
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname).toLowerCase();
+
+      // For profile photos, use a simpler naming convention
+      if (uploadType === 'profile') {
+        // Include user identifier if available
+        const userIdentifier = req.body.email ?
+          req.body.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '-') :
+          'user';
+        cb(null, `profile-${userIdentifier}-${uniqueSuffix}${ext}`);
+      } else {
+        // Property images naming (existing logic)
+        const sanitizedFilename = file.originalname
+          .replace(/[^a-zA-Z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .toLowerCase();
+
+        const nameWithoutExt = sanitizedFilename.replace(ext, '');
+        cb(null, `${uniqueSuffix}-${nameWithoutExt}${ext}`);
+      }
+    },
+  });
+};
 
 // Image file filter with more comprehensive validation
 const fileFilter = (req, file, cb) => {
@@ -63,13 +93,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer for multiple file uploads
+// Configure multer for property images (multiple files)
 export const upload = multer({
-  storage,
+  storage: getStorage('properties'),
   fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
     files: 10 // Maximum 10 files per upload
+  },
+});
+
+// Configure multer for profile photos (single file)
+export const uploadProfilePhoto = multer({
+  storage: getStorage('profile'),
+  fileFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit for profile photos
+    files: 1 // Only one file
   },
 });
 
@@ -79,13 +119,17 @@ export const handleMulterError = (err, req, res, next) => {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         error: 'File too large',
-        message: 'Maximum file size is 5MB'
+        message: err.field === 'profilePhoto' ?
+          'Profile photo maximum size is 2MB' :
+          'Maximum file size is 5MB'
       });
     }
     if (err.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
         error: 'Too many files',
-        message: 'Maximum 10 files allowed'
+        message: err.field === 'profilePhoto' ?
+          'Only one profile photo allowed' :
+          'Maximum 10 files allowed'
       });
     }
     return res.status(400).json({
